@@ -1,0 +1,21 @@
+node_modules
+.DS_Store
+.env
+.env.*
+*.log
+
+# build
+/dist
+/build
+packages/*/dist
+
+# tooling
+.turbo
+.pnpm-store
+
+# ui
+packages/ui/dist
+packages/ui/.vite
+
+# local runs
+.fpt
