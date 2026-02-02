@@ -78,6 +78,9 @@ Then your browser will open the UI and you can connect to the local API.
 
 - `docs/SETUP.md`
 - `docs/USAGE.md`
+- `docs/ROADMAP.md`
+- `docs/ARCHITECTURE.md`
+- `docs/SECURITY.md`
 
 ## Current features
 

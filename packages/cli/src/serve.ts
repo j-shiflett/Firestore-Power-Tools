@@ -10,6 +10,7 @@ export async function serve(opts: { projectId: string; port: number }) {
   app.use(express.json({ limit: "2mb" }));
 
   const db = getFirestore(opts.projectId);
+  const idFieldPath = "__name__"; // documentId
 
   app.get("/health", (_req, res) => res.json({ ok: true }));
 
@@ -33,6 +34,45 @@ export async function serve(opts: { projectId: string; port: number }) {
     });
 
     res.json(out);
+  });
+
+  // Document browser (read-only)
+  app.get("/docs", async (req, res) => {
+    const q = z
+      .object({
+        collection: z.string().min(1),
+        limit: z.coerce.number().int().positive().max(500).optional(),
+        startAfter: z.string().min(1).optional(),
+      })
+      .parse(req.query);
+
+    let ref = db.collection(q.collection).orderBy(idFieldPath).limit(q.limit ?? 25);
+    if (q.startAfter) {
+      ref = ref.startAfter(q.startAfter);
+    }
+
+    const snap = await ref.get();
+    const docs = snap.docs.map((d) => ({ id: d.id, data: d.data() }));
+    const nextPageToken = snap.docs.length ? snap.docs[snap.docs.length - 1].id : null;
+
+    res.json({
+      collection: q.collection,
+      docs,
+      nextPageToken,
+    });
+  });
+
+  app.get("/doc", async (req, res) => {
+    const q = z
+      .object({
+        collection: z.string().min(1),
+        id: z.string().min(1),
+      })
+      .parse(req.query);
+
+    const snap = await db.collection(q.collection).doc(q.id).get();
+    if (!snap.exists) return res.status(404).json({ error: "not_found" });
+    res.json({ id: snap.id, data: snap.data() });
   });
 
   app.listen(opts.port, "127.0.0.1", () => {

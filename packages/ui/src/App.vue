@@ -1,77 +1,32 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import axios from 'axios'
 
-const serverBase = ref('http://127.0.0.1:4011')
+import DbBrowser from './DbBrowser.vue'
+import SchemaViewer from './SchemaViewer.vue'
 
-const collections = ref<string[]>([])
-const selectedCollection = ref<string>('')
+type Tab = 'db' | 'schema'
+const tab = ref<Tab>('db')
 
-const schema = ref<any>(null)
-const loading = ref(false)
-const error = ref<string | null>(null)
-
-const canInfer = computed(() => !!selectedCollection.value && !loading.value)
-
-async function loadCollections() {
-  error.value = null
-  loading.value = true
-  try {
-    const res = await axios.get(`${serverBase.value}/collections`)
-    collections.value = res.data.collections
-    if (collections.value.length && !selectedCollection.value) {
-      selectedCollection.value = collections.value[0]
-    }
-  } catch (e: any) {
-    error.value = e?.message ?? String(e)
-  } finally {
-    loading.value = false
-  }
-}
-
-async function inferSchema() {
-  error.value = null
-  loading.value = true
-  try {
-    const res = await axios.get(`${serverBase.value}/schema/infer`, {
-      params: { collection: selectedCollection.value, limit: 200 },
-    })
-    schema.value = res.data
-  } catch (e: any) {
-    error.value = e?.message ?? String(e)
-  } finally {
-    loading.value = false
-  }
-}
+const title = computed(() => (tab.value === 'db' ? 'Database Browser' : 'Schema Explorer'))
 </script>
 
 <template>
-  <div style="max-width: 960px; margin: 24px auto; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
-    <h2>Firestore Power Tools</h2>
+  <div style="max-width: 1100px; margin: 24px auto; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+    <div style="display:flex; align-items:center; justify-content: space-between; gap: 12px; flex-wrap: wrap">
+      <div>
+        <h2 style="margin:0">Firestore Power Tools</h2>
+        <div style="color:#666">{{ title }}</div>
+      </div>
 
-    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap">
-      <label>
-        Local server:
-        <input v-model="serverBase" style="min-width: 320px" />
-      </label>
-
-      <button @click="loadCollections" :disabled="loading">Load collections</button>
-
-      <label>
-        Collection:
-        <select v-model="selectedCollection">
-          <option v-for="c in collections" :key="c" :value="c">{{ c }}</option>
-        </select>
-      </label>
-
-      <button @click="inferSchema" :disabled="!canInfer">Infer schema</button>
+      <div style="display:flex; gap: 8px">
+        <button @click="tab = 'db'" :disabled="tab === 'db'">DB Browser</button>
+        <button @click="tab = 'schema'" :disabled="tab === 'schema'">Schema</button>
+      </div>
     </div>
 
-    <p v-if="error" style="color: #c00">{{ error }}</p>
-
-    <div v-if="schema" style="margin-top: 16px">
-      <h3>Observed schema (sample: {{ schema.sampleSize }})</h3>
-      <pre style="background: #111; color: #ddd; padding: 12px; overflow: auto">{{ JSON.stringify(schema, null, 2) }}</pre>
+    <div style="margin-top: 16px">
+      <DbBrowser v-if="tab === 'db'" />
+      <SchemaViewer v-else />
     </div>
   </div>
 </template>
