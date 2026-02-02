@@ -8,6 +8,16 @@
 - `fpt serve` / `fpt up` — start local API only
 - `fpt infer --collection <name>` — infer observed schema (JSON)
 
+## Export
+
+From the UI (DB Browser tab):
+- Export **JSONL**
+- Export **CSV** (top-level fields only; nested values are JSON-stringified)
+
+Under the hood it calls:
+- `GET /export?collection=<name>&format=jsonl&limit=1000`
+- `GET /export?collection=<name>&format=csv&limit=1000`
+
 ## How schema inference works
 
 Firestore is schemaless.

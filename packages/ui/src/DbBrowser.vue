@@ -63,8 +63,15 @@ async function loadDoc() {
   }
 }
 
+function downloadUrl(format: 'jsonl' | 'csv') {
+  const base = serverBase.value.replace(/\/$/, '')
+  const c = encodeURIComponent(selectedCollection.value)
+  return `${base}/export?collection=${c}&format=${format}&limit=1000`
+}
+
 const canLoadDocs = computed(() => !!selectedCollection.value && !loading.value)
 const canLoadMore = computed(() => !!nextPageToken.value && !loading.value)
+const canExport = computed(() => !!selectedCollection.value)
 </script>
 
 <template>
@@ -88,6 +95,15 @@ const canLoadMore = computed(() => !!nextPageToken.value && !loading.value)
 
       <button @click="loadDocs(true)" :disabled="!canLoadDocs">Load docs</button>
       <button @click="loadDocs(false)" :disabled="!canLoadMore">Load more</button>
+
+      <span style="flex: 1" />
+
+      <a :href="downloadUrl('jsonl')" :aria-disabled="!canExport" :style="{ pointerEvents: canExport ? 'auto' : 'none', opacity: canExport ? 1 : 0.5 }">
+        Export JSONL
+      </a>
+      <a :href="downloadUrl('csv')" :aria-disabled="!canExport" :style="{ pointerEvents: canExport ? 'auto' : 'none', opacity: canExport ? 1 : 0.5 }">
+        Export CSV
+      </a>
     </div>
 
     <p v-if="error" style="color: #c00">{{ error }}</p>
