@@ -4,6 +4,7 @@ import process from "node:process";
 
 import { getFirestore } from "./firestore.js";
 import { getConfigPath, loadConfig, saveConfig } from "./config.js";
+import { generateWriteToken } from "./write.js";
 
 async function getGcloudDefaultProject(): Promise<string> {
   return await new Promise((resolve) => {
@@ -113,14 +114,32 @@ export async function setupWizard() {
       );
     }
 
-    await saveConfig({ ...existing, projectId, port, serverHost: existing.serverHost ?? "127.0.0.1" });
+    // 6) write mode (optional)
+    const enableWrite = await rl.question("Enable WRITE mode (edit/delete docs)? (y/N) ");
+    let writeEnabled = existing.writeEnabled ?? false;
+    let writeToken = existing.writeToken;
+    if (["y", "yes"].includes(String(enableWrite).trim().toLowerCase())) {
+      writeEnabled = true;
+      writeToken = generateWriteToken();
+      process.stdout.write("\nWRITE MODE ENABLED. Keep this token secret:\n");
+      process.stdout.write(`  X-FPT-Write-Token: ${writeToken}\n\n`);
+    }
+
+    await saveConfig({
+      ...existing,
+      projectId,
+      port,
+      serverHost: existing.serverHost ?? "127.0.0.1",
+      writeEnabled,
+      writeToken,
+    });
 
     process.stdout.write(
       [
         "\nSaved config:",
         `  ${getConfigPath()}`,
         "\nNext:",
-        `  fpt serve --project ${projectId} --port ${port}`,
+        "  fpt run",
         "  (then start the UI: pnpm --filter @fpt/ui dev)",
       ].join("\n") + "\n"
     );

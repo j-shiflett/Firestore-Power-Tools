@@ -4,8 +4,10 @@ import { z } from "zod";
 import { getFirestore } from "./firestore.js";
 import { inferSchema } from "./schema/infer.js";
 import { writeCsv, writeJsonl } from "./export.js";
+import { QueryRequest, runQuery } from "./query.js";
+import { assertWriteEnabled } from "./write.js";
 
-export async function serve(opts: { projectId: string; port: number }) {
+export async function serve(opts: { projectId: string; port: number; writeEnabled?: boolean; writeToken?: string }) {
   const app = express();
   app.use(cors());
   app.use(express.json({ limit: "2mb" }));
@@ -74,6 +76,75 @@ export async function serve(opts: { projectId: string; port: number }) {
     const snap = await db.collection(q.collection).doc(q.id).get();
     if (!snap.exists) return res.status(404).json({ error: "not_found" });
     res.json({ id: snap.id, data: snap.data() });
+  });
+
+  app.get("/query", async (req, res) => {
+    // where is passed as a JSON string in querystring for convenience.
+    const raw = z
+      .object({
+        collection: z.string().min(1),
+        where: z.string().optional(),
+        orderByField: z.string().optional(),
+        orderByDir: z.enum(["asc", "desc"]).optional(),
+        limit: z.coerce.number().optional(),
+        startAfterId: z.string().optional(),
+      })
+      .parse(req.query);
+
+    const where = raw.where ? JSON.parse(raw.where) : [];
+    const out = await runQuery(
+      db,
+      QueryRequest.parse({
+        collection: raw.collection,
+        where,
+        orderBy: raw.orderByField
+          ? { field: raw.orderByField, direction: raw.orderByDir ?? "asc" }
+          : undefined,
+        limit: raw.limit ?? 25,
+        startAfterId: raw.startAfterId,
+      })
+    );
+
+    res.json(out);
+  });
+
+  // Write mode (opt-in) - edit / delete
+  app.patch("/doc", async (req, res) => {
+    try {
+      assertWriteEnabled(opts, req);
+    } catch (e: any) {
+      return res.status(e?.status ?? 401).json({ error: e?.message ?? "write_not_allowed" });
+    }
+
+    const q = z
+      .object({
+        collection: z.string().min(1),
+        id: z.string().min(1),
+      })
+      .parse(req.query);
+
+    const body = z.object({ data: z.record(z.any()) }).parse(req.body);
+
+    await db.collection(q.collection).doc(q.id).set(body.data, { merge: true });
+    res.json({ ok: true });
+  });
+
+  app.delete("/doc", async (req, res) => {
+    try {
+      assertWriteEnabled(opts, req);
+    } catch (e: any) {
+      return res.status(e?.status ?? 401).json({ error: e?.message ?? "write_not_allowed" });
+    }
+
+    const q = z
+      .object({
+        collection: z.string().min(1),
+        id: z.string().min(1),
+      })
+      .parse(req.query);
+
+    await db.collection(q.collection).doc(q.id).delete();
+    res.json({ ok: true });
   });
 
   // Export (read-only)

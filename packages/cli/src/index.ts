@@ -46,7 +46,7 @@ program
     if (!projectId) {
       throw new Error("Missing project id. Run `fpt setup` or pass --project <id>.");
     }
-    await serve({ projectId, port });
+    await serve({ projectId, port, writeEnabled: cfg.writeEnabled, writeToken: cfg.writeToken });
   });
 
 program
@@ -70,7 +70,7 @@ program
     const uiUrl = String(opts.ui);
 
     // Start server (non-blocking)
-    await serve({ projectId, port });
+    await serve({ projectId, port, writeEnabled: cfg.writeEnabled, writeToken: cfg.writeToken });
 
     // Friendly instructions
     process.stdout.write(

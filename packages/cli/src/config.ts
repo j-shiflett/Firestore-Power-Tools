@@ -6,6 +6,12 @@ export type FptConfig = {
   projectId?: string;
   port?: number;
   serverHost?: string;
+
+  /** If true, enable write endpoints (doc update/delete). Default false. */
+  writeEnabled?: boolean;
+
+  /** Required token for write operations (sent via X-FPT-Write-Token). */
+  writeToken?: string;
 };
 
 function configDir() {

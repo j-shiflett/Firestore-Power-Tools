@@ -15,7 +15,14 @@ If you use GitHub Personal Access Tokens for pushes, treat them like passwords a
 
 ## Write operations
 
+Write mode is **disabled by default**.
+
+To enable it:
+- Run `fpt setup` and answer yes to write mode
+- The wizard will generate a `writeToken`
+- The UI/API will require `X-FPT-Write-Token` for writes
+
 Any document edit/delete features should:
 - require explicit opt-in
 - show a clear confirmation
-- create a local audit log
+- create a local audit log (coming next)
